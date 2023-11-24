@@ -1,34 +1,40 @@
 import NextAuth, { type DefaultSession } from 'next-auth'
-import GitHub from 'next-auth/providers/github'
+import CredentialsProvider from 'next-auth/providers/credentials'
 
 declare module 'next-auth' {
   interface Session {
     user: {
-      /** The user's id. */
       id: string
     } & DefaultSession['user']
   }
 }
 
-export const {
-  handlers: { GET, POST },
-  auth,
-  CSRF_experimental // will be removed in future
-} = NextAuth({
-  providers: [GitHub],
+export default NextAuth({
+  providers: [
+    CredentialsProvider({
+      name: 'Credentials',
+      credentials: {},
+      authorize() {
+        // Return a default user object
+        return {
+          id: 'default-user-id',
+          name: 'Default User',
+          email: 'default@example.com',
+          image: 'default-image-url',
+        };
+      },
+    }),
+  ],
   callbacks: {
-    jwt({ token, profile }) {
-      if (profile) {
-        token.id = profile.id
-        token.image = profile.avatar_url || profile.picture
+    session({ session, user }) {
+      // Assign the default user ID
+      if (user) {
+        session.user.id = user.id;
       }
-      return token
+      return session;
     },
-    authorized({ auth }) {
-      return !!auth?.user // this ensures there is a logged in user for -every- request
-    }
   },
   pages: {
-    signIn: '/sign-in' // overrides the next-auth default signin page https://authjs.dev/guides/basics/pages
-  }
-})
+    signIn: '/sign-in',
+  },
+});
